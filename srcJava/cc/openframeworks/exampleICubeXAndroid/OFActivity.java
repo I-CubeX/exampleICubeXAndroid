@@ -25,11 +25,14 @@ import android.view.MenuItem;
 import android.view.Window;
 import android.widget.Toast;
 import cc.openframeworks.OFAndroid;
+import cc.openframeworks.OFAndroid.*;
+import cc.openframeworks.OFAndroidMidiBridge;
 import cc.openframeworks.exampleICubeXAndroid.R;
 
 
-public class OFActivity extends cc.openframeworks.OFActivity{
+public class OFActivity extends cc.openframeworks.OFActivity implements cc.openframeworks.OFCustomListener {
 	
+	public OFAndroidMidiBridge midiBridge;
 	private BluetoothMidiDevice myBtMidi = null;
 	private SystemMessageDecoder mySysExDecoder;
 	private Toast toast;
@@ -45,7 +48,7 @@ public class OFActivity extends cc.openframeworks.OFActivity{
 	
 	
 	//simple helper method for data display+logging to LogCat
-	private void post(final String msg) {
+	public void post(final String msg) {
 		runOnUiThread(new Runnable() {
 			@Override
 			public void run() {
@@ -108,11 +111,20 @@ public class OFActivity extends cc.openframeworks.OFActivity{
         	finish();
         }
         
-        //requestWindowFeature(Window.FEATURE_NO_TITLE);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
         
         
         mySysExDecoder = new SystemMessageDecoder(midiSysExReceiver);
+        
+        //set up midi bridge
+        midiBridge = new OFAndroidMidiBridge();
+        midiBridge.addCustomListener((cc.openframeworks.OFCustomListener)this);
 
+        OFAndroid.onCustom();
+        OFAndroid.onCustom();
+        OFAndroid.onCustom();
+        OFAndroid.onCustom();
+        
 		//we send dummy data to make interface think sensor 0 is on:
 		//TODO: will be replaced with actual sysex message!
         //PORT IS NOT OPEN YET!!!
@@ -415,6 +427,15 @@ public class OFActivity extends cc.openframeworks.OFActivity{
 			@Override
 			public void endBlock() {}
 		};
+
+
+		@Override
+		public void onEvent() {
+			// calling from the custom listener
+			post("onEvent from Custom listener!");
+			
+		}
+
 
 }
 

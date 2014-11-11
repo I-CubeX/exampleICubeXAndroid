@@ -115,6 +115,7 @@ void ofApp::windowResized(int w, int h){
 //--------------------------------------------------------------
 void ofApp::touchDown(int x, int y, int id){
 	output_msg += ofToString(x)+":"+ofToString(y)+"\n";
+	ofxAndroidMidiBridge::testTrigger();
 }
 
 //--------------------------------------------------------------
@@ -185,6 +186,7 @@ void ofApp::cancelPressed(){
 void ofApp::onCustom() {
 	//output_msg+="onCustom\n";
 	jni_count++;
+	ofxAndroidMidiBridge::testTrigger();
 }
 
 void ofApp::onArray(char* data, int len) {

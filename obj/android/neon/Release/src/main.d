@@ -202,7 +202,8 @@ obj/android/neon/Release/src/main.o: src/main.cpp \
  ../../..//addons/ofxMidi/libs/rtmidi/RtMidi.h \
  ../../..//addons/ofxMidi/libs/rtmidi/RtError.h \
  ../../..//addons/ofxMidi/src/ofxMidiOut.h \
- ../../..//addons/ofxMidi/src/desktop/ofxRtMidiOut.h
+ ../../..//addons/ofxMidi/src/desktop/ofxRtMidiOut.h \
+ ../../..//addons/ofxAndroid/src/ofxAndroidMidiBridge.h
 
 ../../..//libs/openFrameworks/ofMain.h:
 
@@ -613,3 +614,5 @@ src/ofApp.h:
 ../../..//addons/ofxMidi/src/ofxMidiOut.h:
 
 ../../..//addons/ofxMidi/src/desktop/ofxRtMidiOut.h:
+
+../../..//addons/ofxAndroid/src/ofxAndroidMidiBridge.h:

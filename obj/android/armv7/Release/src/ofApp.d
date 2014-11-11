@@ -202,7 +202,8 @@ obj/android/armv7/Release/src/ofApp.o: src/ofApp.cpp src/ofApp.h \
  ../../..//addons/ofxMidi/libs/rtmidi/RtMidi.h \
  ../../..//addons/ofxMidi/libs/rtmidi/RtError.h \
  ../../..//addons/ofxMidi/src/ofxMidiOut.h \
- ../../..//addons/ofxMidi/src/desktop/ofxRtMidiOut.h
+ ../../..//addons/ofxMidi/src/desktop/ofxRtMidiOut.h \
+ ../../..//addons/ofxAndroid/src/ofxAndroidMidiBridge.h
 
 src/ofApp.h:
 
@@ -613,3 +614,5 @@ src/ofApp.h:
 ../../..//addons/ofxMidi/src/ofxMidiOut.h:
 
 ../../..//addons/ofxMidi/src/desktop/ofxRtMidiOut.h:
+
+../../..//addons/ofxAndroid/src/ofxAndroidMidiBridge.h:

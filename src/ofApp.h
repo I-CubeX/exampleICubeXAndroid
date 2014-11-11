@@ -4,6 +4,7 @@
 #include "ofxAndroid.h"
 #include "ofxXmlSettings.h"
 #include "ofxICubeX.h"
+#include "ofxAndroidMidiBridge.h"
 
 class ofApp : public ofxAndroidApp{
 	
