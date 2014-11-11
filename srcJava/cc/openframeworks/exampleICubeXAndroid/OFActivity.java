@@ -111,7 +111,7 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
         	finish();
         }
         
-        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        //requestWindowFeature(Window.FEATURE_NO_TITLE);
         
         
         mySysExDecoder = new SystemMessageDecoder(midiSysExReceiver);
@@ -425,7 +425,14 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 		        sb.append(String.format("%02X ", b));
 		    }
 			post("data from ofxICubeX: " + sb.toString());
-			
+			if (myBtMidi!=null) {
+				myBtMidi.getMidiOut().beginBlock();
+
+	    		for (byte b : data) {
+	    			myBtMidi.getMidiOut().onRawByte(b);
+	    		}
+	    		myBtMidi.getMidiOut().endBlock();
+			}
 		}
 
 

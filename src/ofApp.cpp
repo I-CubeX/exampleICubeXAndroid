@@ -117,7 +117,7 @@ void ofApp::touchDown(int x, int y, int id){
 	//output_msg += ofToString(x)+":"+ofToString(y)+"\n";
 	//ofxAndroidMidiBridge::testTrigger();
 	myICube.setMode(false); //host mode
-	myICube.setStream(true, 0);
+	myICube.setStream(true, 7);
 }
 
 //--------------------------------------------------------------
@@ -132,7 +132,7 @@ void ofApp::touchUp(int x, int y, int id){
 
 //--------------------------------------------------------------
 void ofApp::touchDoubleTap(int x, int y, int id){
-
+	myICube.setStream(false, 7);
 }
 
 //--------------------------------------------------------------
