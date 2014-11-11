@@ -114,11 +114,10 @@ void ofApp::windowResized(int w, int h){
 
 //--------------------------------------------------------------
 void ofApp::touchDown(int x, int y, int id){
-	output_msg += ofToString(x)+":"+ofToString(y)+"\n";
-	ofxAndroidMidiBridge::testTrigger();
-
-	char d[3] = {'a', 'b', 'c'};
-	ofxAndroidMidiBridge::sendData(d, 3);
+	//output_msg += ofToString(x)+":"+ofToString(y)+"\n";
+	//ofxAndroidMidiBridge::testTrigger();
+	myICube.setMode(false); //host mode
+	myICube.setStream(true, 0);
 }
 
 //--------------------------------------------------------------
@@ -194,6 +193,7 @@ void ofApp::onCustom() {
 }
 
 void ofApp::onArray(char* data, int len) {
+
 	//output_msg+="onArray: size = " + ofToString(len)+ "\n"; // len = " + ofToString(len) + "\n";
 	//output_msg+="array contents = ";
 	data_len = len;

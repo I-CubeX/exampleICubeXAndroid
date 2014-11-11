@@ -120,18 +120,6 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
         midiBridge = new OFAndroidMidiBridge();
         midiBridge.addCustomListener((cc.openframeworks.OFCustomListener)this);
 
-        OFAndroid.onCustom();
-        OFAndroid.onCustom();
-        OFAndroid.onCustom();
-        OFAndroid.onCustom();
-        
-		//we send dummy data to make interface think sensor 0 is on:
-		//TODO: will be replaced with actual sysex message!
-        //PORT IS NOT OPEN YET!!!
-		//byte data[] = new byte[] { (byte) 0xF0, (byte) 0x7D, (byte)0x00,
-		//		(byte) 0x01, (byte) 0x40, (byte) 0xF7};
-		//OFAndroid.passArray(data);
-
 	}
 
 	@Override
@@ -430,9 +418,13 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 
 
 		@Override
-		public void onEvent() {
+		public void onEvent(byte[] data) {
 			// calling from the custom listener
-			post("onEvent from Custom listener!");
+			StringBuilder sb = new StringBuilder();
+		    for (byte b : data) {
+		        sb.append(String.format("%02X ", b));
+		    }
+			post("data from ofxICubeX: " + sb.toString());
 			
 		}
 
