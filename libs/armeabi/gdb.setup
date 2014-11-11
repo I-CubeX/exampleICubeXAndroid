@@ -1,0 +1,6 @@
+set solib-search-path /Users/johnty/dev/of_v0.8.4_android_release/examples/android/exampleICubeXAndroid/obj/local/armeabi:/Users/johnty/dev/of_v0.8.4_android_release/examples/android/exampleICubeXAndroid/libs/armeabi
+directory /Users/johnty/dev/android-ndk-r9b/platforms/android-17/arch-arm/usr/include
+directory /Users/johnty/dev/of_v0.8.4_android_release/examples/android/exampleICubeXAndroid/src
+directory /Users/johnty/dev/android-ndk-r9b/sources/cxx-stl/system
+directory /Users/johnty/dev/of_v0.8.4_android_release/examples/android/exampleICubeXAndroid/libs/armeabi
+
