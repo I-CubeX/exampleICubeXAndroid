@@ -31,7 +31,7 @@ import cc.openframeworks.exampleICubeXAndroid.R;
 
 
 public class OFActivity extends cc.openframeworks.OFActivity implements cc.openframeworks.OFCustomListener {
-	
+
 	public OFAndroidMidiBridge midiBridge;
 	private BluetoothMidiDevice myBtMidi = null;
 	private SystemMessageDecoder mySysExDecoder;
@@ -45,8 +45,8 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 	private Handler handler = new Handler();
 	private final int SAMPLE_INTERVAL_MS = 25; // dummy data generation interval in ms
 	private final int SAMPLE_DATA_SIZE = 8; //dummy data length
-	
-	
+
+
 	//simple helper method for data display+logging to LogCat
 	public void post(final String msg) {
 		runOnUiThread(new Runnable() {
@@ -62,37 +62,6 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 		});
 	}
 
-	private Runnable runnable = new Runnable() {
-		//this class deals with generating periodic events,
-		// to emulate the incoming "midi messages" from device
-		// at a given rate
-		@Override
-		public void run() {
-			Random r = new Random();
-			byte r_b = (byte) r.nextInt(127);
-			//what looks like sensor data here:
-			// sensor 0, value = random (0-127)
-			byte data[] = new byte[] { (byte) 0xF0, (byte) 0x7D, (byte)0x00,
-					(byte) 0x00, (byte) r_b, (byte) 0xF7};
-			OFAndroid.passArray(data);
-
-			jni_calls++;
-			if (clickCount % 2 == 1) {
-				//repeat if we have odd clickcount
-				// silly way to trigger sending of dummy data...
-				handler.postDelayed(runnable, SAMPLE_INTERVAL_MS);
-			}
-			// display call count once in a while...
-			if (jni_calls % 1000 == 0) {
-				String msg = "JniCnt=" + jni_calls;
-				Toast t = Toast.makeText(getApplicationContext(), msg, Toast.LENGTH_SHORT);
-				t.setGravity(Gravity.TOP|Gravity.CENTER, 0, 0);
-				t.show();
-				Log.v("JNI_CNT", msg);
-			}
-		}
-	};
-
 	@Override
 	public void onCreate(Bundle savedInstanceState)
 	{ 
@@ -100,25 +69,25 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 		String packageName = getPackageName();
 
 		ofApp = new OFAndroid(packageName,this);
-		
+
 		//init midi objects
-		
-        try {
-        	myBtMidi = new BluetoothMidiDevice(observer, receiver);
-        }
-        catch (IOException e) {
-        	post("MIDI not available!");
-        	finish();
-        }
-        
-        //requestWindowFeature(Window.FEATURE_NO_TITLE);
-        
-        
-        mySysExDecoder = new SystemMessageDecoder(midiSysExReceiver);
-        
-        //set up midi bridge
-        midiBridge = new OFAndroidMidiBridge();
-        midiBridge.addCustomListener((cc.openframeworks.OFCustomListener)this);
+
+		try {
+			myBtMidi = new BluetoothMidiDevice(observer, receiver);
+		}
+		catch (IOException e) {
+			post("MIDI not available!");
+			finish();
+		}
+
+		//requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+
+		mySysExDecoder = new SystemMessageDecoder(midiSysExReceiver);
+
+		//set up midi bridge
+		midiBridge = new OFAndroidMidiBridge();
+		midiBridge.addCustomListener((cc.openframeworks.OFCustomListener)this);
 
 	}
 
@@ -176,70 +145,18 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 
 		//handle within java
 		if (item.getItemId() == R.id.menu_conn_bt) {
-            if (myBtMidi.getConnectionState() == BluetoothSppConnection.State.NONE) {
-                startActivityForResult(new Intent(this, DeviceListActivity.class), CONNECT);
-              } else {
-            	  myBtMidi.close();
-              }
+			if (myBtMidi.getConnectionState() == BluetoothSppConnection.State.NONE) {
+				startActivityForResult(new Intent(this, DeviceListActivity.class), CONNECT);
+			} else {
+				myBtMidi.close();
+			}
 
 		}
 		if (item.getItemId() == R.id.menu_settings) {
-			// use this to send an stream echo message
-			//byte data[] = new byte[] { (byte) 0xF0, (byte) 0x7D, (byte)0x00,
-			//		(byte) 0x01, (byte) 0x40, (byte) 0xF7};
-			//OFAndroid.passArray(data);
-			
-			//host mode
-    		byte sysex_cmd[] = new byte[] { (byte) 0xF0, (byte) 0x7D, (byte) 0x00, (byte) 0x5A, (byte) 0x00, (byte) 0xF7 };
-    		myBtMidi.getMidiOut().beginBlock();
-
-    		for (int i=0; i<sysex_cmd.length; i++) {
-    			myBtMidi.getMidiOut().onRawByte(sysex_cmd[i]);
-    		}
-    		myBtMidi.getMidiOut().endBlock();
-			
-			post("sending stream echo for sensor 0");
-			
-			//set interval to 20 (0x14) ms
-			sysex_cmd = new byte[] { (byte) 0xF0, (byte) 0x7D, (byte) 0x00, (byte) 0x03, (byte) 0x00,(byte) 0x14, (byte) 0xF7 };
-    		myBtMidi.getMidiOut().beginBlock();
-    		for (int i=0; i<sysex_cmd.length; i++) {
-    			myBtMidi.getMidiOut().onRawByte(sysex_cmd[i]);
-    		}
-    		myBtMidi.getMidiOut().endBlock();
-    		//start stream port 0 (0x40 == on, port 0)
-    		sysex_cmd = new byte[] { (byte) 0xF0, (byte) 0x7D, (byte) 0x00, (byte) 0x01, (byte) 0x40, (byte) 0xF7 };
-    		myBtMidi.getMidiOut().beginBlock();
-    		for (int i=0; i<sysex_cmd.length; i++) {
-    			myBtMidi.getMidiOut().onRawByte(sysex_cmd[i]);
-    		}
-    		myBtMidi.getMidiOut().endBlock();
-    		    		
-    		//start stream port 7 (0x47 == on, port 7)
-    		sysex_cmd = new byte[] { (byte) 0xF0, (byte) 0x7D, (byte) 0x00, (byte) 0x01, (byte) 0x47, (byte) 0xF7 };
-    		myBtMidi.getMidiOut().beginBlock();
-    		for (int i=0; i<sysex_cmd.length; i++) {
-    			myBtMidi.getMidiOut().onRawByte(sysex_cmd[i]);
-    		}
-    		myBtMidi.getMidiOut().endBlock();
-			
 		}
 
-		//give oF a chance
-		// This passes the menu option string to OF
-		// you can add additional behavior from java modifying this method
-		// but keep the call to OFAndroid so OF is notified of menu events
+		//give oF a chance: pass to ofApp (C++ code)
 		if(OFAndroid.menuItemSelected(item.getItemId())) {
-			String msg = "back from C++ code!";
-			post(msg);
-		}
-		//byte data[] = new byte[] { (byte) 0xF0, (byte) 0xFF, (byte)0x0A};
-		//data[2]+=clickCount;
-		//OFAndroid.passArray(data);
-		OFAndroid.onCustom();
-		OFAndroid.passInt(clickCount);
-		if (clickCount % 2 == 1) {
-			//handler.postDelayed(runnable, SAMPLE_INTERVAL_MS);
 		}
 
 		return super.onOptionsItemSelected(item);
@@ -252,7 +169,7 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 		//  you can add or remove menu options from here
 		return  super.onPrepareOptionsMenu(menu);
 	}
-	
+
 	//BT observer class for showing connection status
 	private final BluetoothSppObserver observer = new BluetoothSppObserver() {
 		@Override
@@ -271,7 +188,7 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 		}
 
 	};
-	
+
 	@Override
 	public void onActivityResult(int requestCode, int resultCode, Intent data) {
 		switch (requestCode) {
@@ -280,7 +197,7 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 				String address = data.getExtras().getString(DeviceListActivity.DEVICE_ADDRESS);
 				try {
 					myBtMidi.connect(address);
-					
+
 				} catch (IOException e) {
 					post(e.getMessage());
 				}
@@ -288,154 +205,149 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 			break;
 		}
 	}
-	
-	
 	//sys ex receiver
-	  
-	  private final SystemMessageReceiver midiSysExReceiver = new SystemMessageReceiver() {
+	private final SystemMessageReceiver midiSysExReceiver = new SystemMessageReceiver() {
 
-			@Override
-			public void onSystemExclusive(byte[] sysex) {
-				// TODO Auto-generated method stub
-				StringBuilder sb = new StringBuilder();
-			    for (byte b : sysex) {
-			        sb.append(String.format("%02X ", b));
-			    }
-				//Log.v("sysex: ", sb.toString());
-				
-				OFAndroid.passArray(sysex);
-				//Log.v("USBMIDI", "sysex");
-			}
-
-			@Override
-			public void onTimeCode(int value) {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onSongPosition(int pointer) {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onSongSelect(int index) {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onTuneRequest() {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onTimingClock() {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onStart() {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onContinue() {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onStop() {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onActiveSensing() {
-				// TODO Auto-generated method stub
-			}
-
-			@Override
-			public void onSystemReset() {
-				// TODO Auto-generated method stub
-			}
-
-		};
-	  
-		//BT Receiver Port
-
-		private final MidiReceiver receiver = new MidiReceiver() {
-
-			@Override
-			public void onNoteOff(int channel, int key, int velocity) {
-				post("note off: " + channel + ", " + key + ", " + velocity);
-			}
-
-			@Override
-			public void onNoteOn(int channel, int key, int velocity) {
-				post("note on: " + channel + ", " + key + ", " + velocity);
-			}
-
-			@Override
-			public void onAftertouch(int channel, int velocity) {
-				post("aftertouch: " + channel + ", " + velocity);
-			}
-
-			@Override
-			public void onControlChange(int channel, int controller, int value) {
-				post("control change: " + channel + ", " + controller + ", " + value);
-			}
-
-			@Override
-			public void onPitchBend(int channel, int value) {
-				post("pitch bend: " + channel + ", " + value);
-			}
-
-			@Override
-			public void onPolyAftertouch(int channel, int key, int velocity) {
-				post("polyphonic aftertouch: " + channel + ", " + key + ", " + velocity);
-			}
-
-			@Override
-			public void onProgramChange(int channel, int program) {
-				post("program change: " + channel + ", " + program);
-			}
-
-			@Override
-			public void onRawByte(byte value) {
-				if (mySysExDecoder != null) {
-					mySysExDecoder.decodeByte(value);
-					//Integer v = (int)value;
-					//Log.v("rawbyte", v.toString());
-				}
-			}
-
-			@Override
-			public boolean beginBlock() {
-				return false;
-			}
-
-			@Override
-			public void endBlock() {}
-		};
-
+		//This is the function that passes the received sysex data to
+		// the C++ code via JNI!
+		@Override
+		public void onSystemExclusive(byte[] sysex) {
+			//StringBuilder sb = new StringBuilder();
+			//for (byte b : sysex) {
+			//    sb.append(String.format("%02X ", b));
+			//}
+			//Log.v("sysex: ", sb.toString());
+			OFAndroid.passArray(sysex);
+			//Log.v("USBMIDI", "sysex");
+		}
 
 		@Override
-		public void onEvent(byte[] data) {
-			// calling from the custom listener
-			StringBuilder sb = new StringBuilder();
-		    for (byte b : data) {
-		        sb.append(String.format("%02X ", b));
-		    }
-			post("data from ofxICubeX: " + sb.toString());
-			if (myBtMidi!=null) {
-				myBtMidi.getMidiOut().beginBlock();
+		public void onTimeCode(int value) {
+			// TODO Auto-generated method stub
+		}
 
-	    		for (byte b : data) {
-	    			myBtMidi.getMidiOut().onRawByte(b);
-	    		}
-	    		myBtMidi.getMidiOut().endBlock();
+		@Override
+		public void onSongPosition(int pointer) {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void onSongSelect(int index) {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void onTuneRequest() {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void onTimingClock() {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void onStart() {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void onContinue() {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void onStop() {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void onActiveSensing() {
+			// TODO Auto-generated method stub
+		}
+
+		@Override
+		public void onSystemReset() {
+			// TODO Auto-generated method stub
+		}
+
+	};
+
+	//BT Receiver Port
+
+	private final MidiReceiver receiver = new MidiReceiver() {
+
+		@Override
+		public void onNoteOff(int channel, int key, int velocity) {
+			post("note off: " + channel + ", " + key + ", " + velocity);
+		}
+
+		@Override
+		public void onNoteOn(int channel, int key, int velocity) {
+			post("note on: " + channel + ", " + key + ", " + velocity);
+		}
+
+		@Override
+		public void onAftertouch(int channel, int velocity) {
+			post("aftertouch: " + channel + ", " + velocity);
+		}
+
+		@Override
+		public void onControlChange(int channel, int controller, int value) {
+			post("control change: " + channel + ", " + controller + ", " + value);
+		}
+
+		@Override
+		public void onPitchBend(int channel, int value) {
+			post("pitch bend: " + channel + ", " + value);
+		}
+
+		@Override
+		public void onPolyAftertouch(int channel, int key, int velocity) {
+			post("polyphonic aftertouch: " + channel + ", " + key + ", " + velocity);
+		}
+
+		@Override
+		public void onProgramChange(int channel, int program) {
+			post("program change: " + channel + ", " + program);
+		}
+
+		@Override
+		public void onRawByte(byte value) {
+			if (mySysExDecoder != null) {
+				mySysExDecoder.decodeByte(value);
+				//Integer v = (int)value;
+				//Log.v("rawbyte", v.toString());
 			}
 		}
 
+		@Override
+		public boolean beginBlock() {
+			return false;
+		}
 
+		@Override
+		public void endBlock() {}
+	};
+
+
+	@Override
+	public void onEvent(byte[] data) {
+		// calling from the custom listener
+		StringBuilder sb = new StringBuilder();
+		for (byte b : data) {
+			sb.append(String.format("%02X ", b));
+		}
+		post("data from ofxICubeX: " + sb.toString());
+		if (myBtMidi!=null) {
+			myBtMidi.getMidiOut().beginBlock();
+
+			for (byte b : data) {
+				myBtMidi.getMidiOut().onRawByte(b);
+			}
+			myBtMidi.getMidiOut().endBlock();
+		}
+	}
 }
 
 
