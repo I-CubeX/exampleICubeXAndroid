@@ -17,6 +17,7 @@ public final class R {
     }
     public static final class id {
         public static final int menu_conn_bt=0x7f080005;
+        public static final int menu_conn_usb=0x7f080006;
         public static final int menu_settings=0x7f080004;
         public static final int of_gl_surface=0x7f080003;
         public static final int paired_devices=0x7f080001;
@@ -40,6 +41,7 @@ public final class R {
         public static final int hello=0x7f05000b;
         public static final int hello_world=0x7f05000d;
         public static final int menu_connect_bt=0x7f05000f;
+        public static final int menu_connect_usb=0x7f050010;
         public static final int menu_settings=0x7f05000e;
         public static final int none_paired=0x7f050001;
         public static final int select_device=0x7f050000;

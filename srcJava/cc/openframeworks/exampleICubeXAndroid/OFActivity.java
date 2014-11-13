@@ -1,7 +1,7 @@
 package cc.openframeworks.exampleICubeXAndroid;
 
 import java.io.IOException;
-import java.util.Random;
+import java.util.List;
 
 import com.noisepages.nettoyeur.bluetooth.BluetoothSppConnection;
 import com.noisepages.nettoyeur.bluetooth.BluetoothSppObserver;
@@ -10,41 +10,58 @@ import com.noisepages.nettoyeur.bluetooth.util.DeviceListActivity;
 import com.noisepages.nettoyeur.midi.MidiReceiver;
 import com.noisepages.nettoyeur.midi.util.SystemMessageDecoder;
 import com.noisepages.nettoyeur.midi.util.SystemMessageReceiver;
+import com.noisepages.nettoyeur.usb.ConnectionFailedException;
+import com.noisepages.nettoyeur.usb.DeviceNotConnectedException;
+import com.noisepages.nettoyeur.usb.InterfaceNotAvailableException;
+import com.noisepages.nettoyeur.usb.UsbBroadcastHandler;
+import com.noisepages.nettoyeur.usb.midi.UsbMidiDevice;
+import com.noisepages.nettoyeur.usb.midi.UsbMidiDevice.UsbMidiInput;
+import com.noisepages.nettoyeur.usb.midi.UsbMidiDevice.UsbMidiOutput;
+import com.noisepages.nettoyeur.usb.midi.util.UsbMidiInputSelector;
+import com.noisepages.nettoyeur.usb.midi.util.UsbMidiOutputSelector;
+import com.noisepages.nettoyeur.usb.util.AsyncDeviceInfoLookup;
+import com.noisepages.nettoyeur.usb.util.UsbDeviceSelector;
 
 import android.app.Activity;
 import android.bluetooth.BluetoothDevice;
 import android.content.Intent;
+import android.hardware.usb.UsbDevice;
 import android.os.Bundle;
-import android.os.Handler;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
-import android.view.Window;
 import android.widget.Toast;
 import cc.openframeworks.OFAndroid;
-import cc.openframeworks.OFAndroid.*;
 import cc.openframeworks.OFAndroidMidiBridge;
 import cc.openframeworks.exampleICubeXAndroid.R;
 
 
 public class OFActivity extends cc.openframeworks.OFActivity implements cc.openframeworks.OFCustomListener {
 
+
+
 	public OFAndroidMidiBridge midiBridge;
+	//AndroidMIDI interfaces:
+	//BT:
 	private BluetoothMidiDevice myBtMidi = null;
+
+	//USB:
+	private UsbMidiDevice myUSBMidi = null;
+	private MidiReceiver myUSBMidiOut = null;
+
+	//MISC:
 	private SystemMessageDecoder mySysExDecoder;
+
+	//NOTE: Midi receiver is declared below
+	
 	private Toast toast;
 	private static final String TAG = "ICubeXTest";
 	private static final int CONNECT = 1;
 
 	//these are for testing/dummy data:
 	private long jni_calls = 0;
-	private int clickCount = 1;
-	private Handler handler = new Handler();
-	private final int SAMPLE_INTERVAL_MS = 25; // dummy data generation interval in ms
-	private final int SAMPLE_DATA_SIZE = 8; //dummy data length
 
 
 	//simple helper method for data display+logging to LogCat
@@ -73,12 +90,14 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 		//init midi objects
 
 		try {
-			myBtMidi = new BluetoothMidiDevice(observer, receiver);
+			myBtMidi = new BluetoothMidiDevice(observer, myMidiReceiver);
 		}
 		catch (IOException e) {
 			post("MIDI not available!");
 			finish();
 		}
+		installBHandler();
+
 
 		//requestWindowFeature(Window.FEATURE_NO_TITLE);
 
@@ -92,21 +111,38 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 	}
 
 	@Override
+	protected void onDestroy() {
+		super.onDestroy();
+		if (myUSBMidi != null) {
+			myUSBMidi.close();
+		}
+		UsbMidiDevice.uninstallBroadcastHandler(this);
+	}
+
+	@Override
 	public void onDetachedFromWindow() {
 	}
 
 	@Override
 	protected void onPause() {
-		if (myBtMidi != null)
-			myBtMidi.close();
+		//close midi ports.
+		if (myBtMidi != null) {
+			myBtMidi.close();			
+		}
+		if (myUSBMidi != null) {
+			myUSBMidi.close();
+			myUSBMidi = null;
+		}
 		super.onPause();
 		ofApp.pause();
+		UsbMidiDevice.uninstallBroadcastHandler(this);
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
 		ofApp.resume();
+		installBHandler();
 	}
 
 	@Override
@@ -145,6 +181,12 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 
 		//handle within java
 		if (item.getItemId() == R.id.menu_conn_bt) {
+			//first, disconnect USB
+			if (myUSBMidi != null) {
+				Log.v("ICubeX", "closing USB for BT");
+				myUSBMidi.close();
+				myUSBMidi = null;
+			}
 			if (myBtMidi.getConnectionState() == BluetoothSppConnection.State.NONE) {
 				startActivityForResult(new Intent(this, DeviceListActivity.class), CONNECT);
 			} else {
@@ -152,7 +194,23 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 			}
 
 		}
-		if (item.getItemId() == R.id.menu_settings) {
+		if (item.getItemId() == R.id.menu_conn_usb) {
+			//first, lets disconnect BT if its on:
+			if (myBtMidi.getConnectionState() == BluetoothSppConnection.State.CONNECTED) {
+				Log.v("ICubeX", "closing BT for USB");
+				myBtMidi.close();
+			}
+			if (myUSBMidi == null) {
+				Log.v("ICubeX", "select MIDI");
+				chooseMidiDevice();
+			}
+			else {
+				myUSBMidi.close();
+				myUSBMidi = null;
+				Log.v("ICubeX", "close MIDI");
+				post("USB MIDI closed");
+			}
+				
 		}
 
 		//give oF a chance: pass to ofApp (C++ code)
@@ -212,11 +270,11 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 		// the C++ code via JNI!
 		@Override
 		public void onSystemExclusive(byte[] sysex) {
-			//StringBuilder sb = new StringBuilder();
-			//for (byte b : sysex) {
-			//    sb.append(String.format("%02X ", b));
-			//}
-			//Log.v("sysex: ", sb.toString());
+			StringBuilder sb = new StringBuilder();
+			for (byte b : sysex) {
+			    sb.append(String.format("%02X ", b));
+			}
+			Log.v("sysex: ", sb.toString());
 			OFAndroid.passArray(sysex);
 			//Log.v("USBMIDI", "sysex");
 		}
@@ -273,9 +331,9 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 
 	};
 
-	//BT Receiver Port
+	//Same Receiver port for either BT or USB
 
-	private final MidiReceiver receiver = new MidiReceiver() {
+	private final MidiReceiver myMidiReceiver = new MidiReceiver() {
 
 		@Override
 		public void onNoteOff(int channel, int key, int velocity) {
@@ -333,13 +391,14 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 
 	@Override
 	public void onEvent(byte[] data) {
-		// calling from the custom listener
+		// This is incoming sysex data from oF C++ App
+		// to be sent to the MIDI output
 		StringBuilder sb = new StringBuilder();
 		for (byte b : data) {
 			sb.append(String.format("%02X ", b));
 		}
 		post("data from ofxICubeX: " + sb.toString());
-		if (myBtMidi!=null) {
+		if (myBtMidi!=null && myBtMidi.getConnectionState() == BluetoothSppConnection.State.CONNECTED) {
 			myBtMidi.getMidiOut().beginBlock();
 
 			for (byte b : data) {
@@ -347,6 +406,116 @@ public class OFActivity extends cc.openframeworks.OFActivity implements cc.openf
 			}
 			myBtMidi.getMidiOut().endBlock();
 		}
+		
+		if (myUSBMidi!=null) {
+			myUSBMidiOut.beginBlock();
+			for (byte b : data) {
+				myUSBMidiOut.onRawByte(b);
+			}
+			myUSBMidiOut.endBlock();
+		}
+	}
+
+	private void chooseMidiDevice() {
+		final List<UsbMidiDevice> devices = UsbMidiDevice.getMidiDevices(this);
+		new AsyncDeviceInfoLookup() {
+
+			@Override
+			protected void onLookupComplete() {
+				new UsbDeviceSelector<UsbMidiDevice>(devices) {
+
+					@Override
+					protected void onDeviceSelected(UsbMidiDevice device) {
+						myUSBMidi = device;
+						post("Selected device: " + device.getCurrentDeviceInfo());
+						myUSBMidi.requestPermission(OFActivity.this);
+
+						UsbMidiOutputSelector outputSelector = new UsbMidiOutputSelector(myUSBMidi) {
+
+							@Override
+							protected void onOutputSelected(UsbMidiOutput output, UsbMidiDevice device, int iface,
+									int index) {
+								post("Output selection: Interface " + iface + ", Output " + index);
+								try {
+									myUSBMidiOut = output.getMidiOut();
+								} catch (DeviceNotConnectedException e) {
+									post("MIDI device has been disconnected");
+								} catch (InterfaceNotAvailableException e) {
+									post("MIDI interface is unavailable");
+								}
+							}
+
+							@Override
+							protected void onNoSelection(UsbMidiDevice device) {
+								post("No output selected");
+							}
+						};
+
+						outputSelector.show(getFragmentManager(), "");
+
+					}
+
+					@Override
+					protected void onNoSelection() {
+						post("No USB MIDI device selected.");
+					}
+				}.show(getFragmentManager(), null);
+
+			}
+		}.execute(devices.toArray(new UsbMidiDevice[devices.size()]));
+	}
+
+	private void installBHandler() { 
+
+		UsbMidiDevice.installBroadcastHandler(this, new UsbBroadcastHandler() {
+
+			@Override
+			public void onPermissionGranted(UsbDevice device) {
+				if (myUSBMidi == null || !myUSBMidi.matches(device)) return;
+				try {
+					myUSBMidi.open(OFActivity.this);
+				} catch (ConnectionFailedException e1) {
+					post("\n\nConnection failed.");
+					myUSBMidi = null;
+					return;
+				}
+				new UsbMidiInputSelector(myUSBMidi) {
+
+					@Override
+					protected void onInputSelected(UsbMidiInput input, UsbMidiDevice device, int iface,
+							int index) {
+						post("\n\nInput: Interface " + iface + ", Index " + index);
+						input.setReceiver(myMidiReceiver);
+						try {
+							input.start();
+						} catch (DeviceNotConnectedException e) {
+							post("MIDI device has been disconnected.");
+						} catch (InterfaceNotAvailableException e) {
+							post("\n\nMIDI interface is unavailable.");
+						}
+					}
+
+					@Override
+					protected void onNoSelection(UsbMidiDevice device) {
+						post("\n\nNo inputs available.");
+					}
+				}.show(getFragmentManager(), null);
+			}
+
+			@Override
+			public void onPermissionDenied(UsbDevice device) {
+				if (myUSBMidi == null || !myUSBMidi.matches(device)) return;
+				post("Permission denied for device " + myUSBMidi.getCurrentDeviceInfo() + ".");
+				myUSBMidi = null;
+			}
+			@Override
+			public void onDeviceDetached(UsbDevice device) {
+				if (myUSBMidi == null || !myUSBMidi.matches(device)) return;
+				myUSBMidi.close();
+				myUSBMidi = null;
+				post("USB MIDI device detached.");
+			}
+		});
 	}
 }
 

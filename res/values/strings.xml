@@ -4,6 +4,7 @@
     <string name="app_name">exampleICubeXAndroid</string>
     <string name="hello_world">Hello world!</string>
     <string name="menu_settings">Settings</string>
-    <string name="menu_connect_bt">Connect BT</string>
+    <string name="menu_connect_bt">(dis)Connect BT</string>
+    <string name="menu_connect_usb">(dis)Connect USB</string>
 
 </resources>
